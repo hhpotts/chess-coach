@@ -1,5 +1,6 @@
 """Build coach.html (overview, mistake viewer, practice, puzzles, openings) from data/*.json."""
 import chess, collections, json, re, statistics
+from explain import why_best, branches
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -216,11 +217,15 @@ def trend(games):
 def main():
     games = json.loads((DATA / "analysis.json").read_text())
     errors = []
+    deep = json.loads((DATA / "deep.json").read_text()) if (DATA / "deep.json").exists() else {}
     # G<n> = game number in chronological order; stable because new games are appended at the end
     for n, g in enumerate(games, 1):
         for e in g["errors"]:
             prev = g["plies"][e["ply"] - 1] if e["ply"] > 0 else None
             ref = f'G{n}-{e["move_no"]}{"w" if e["ply"] % 2 == 0 else "b"}'
+            d = deep.get(f'{g["id"]}#{e["ply"]}', {})
+            e = dict(e, best_why=why_best(e, d) if d else "", branches=branches(e, d) if d else [],
+                     best_deep=d.get("replies_after") or e["best"])
             errors.append(dict(e, ref=ref, game_no=n, game_id=g["id"], link=g["link"], date=g["date"], color=g["color"],
                                opponent=g["opponent"], opp_elo=g["opp_elo"], result=g["result"],
                                prev=prev["uci"] if prev else None, prev_san=prev["san"] if prev else None))

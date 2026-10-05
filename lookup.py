@@ -4,6 +4,7 @@ Accepts a bare ref or a whole pasted "Copy for Claude" block (the [ref] on its f
 No engine runs here: everything comes from data/analysis.json, data/deep.json and data/puzzles.json.
 """
 import chess, json, re, sys
+from explain import why_best, branches
 from pathlib import Path
 
 DATA = Path(__file__).parent / "data"
@@ -72,6 +73,10 @@ def game_ref(n, move_no, side, extra):
         out += [f"  {m['move']:<7} {ev(m['eval']):>7}  {m['line']}" for m in deep["best_moves"]]
     else:
         out.append(f"Best: {e['best_line']} (also fine: {' '.join(e['good'])})")
+    if deep:
+        out.append(f"Why {deep['best_moves'][0]['move']} is better: {why_best(e, deep)}")
+        for b in branches(e, deep):
+            out.append(f"  - {b['text']}  Line: {b['line']}")
     if "maia_played" in e:
         top = board.san(chess.Move.from_uci(e["maia_top"])) if e.get("maia_top") else "?"
         out.append(f"Maia (<1100 humans): {e['maia_played']:.0%} play my move, {e['maia_best']:.0%} find {e['best_san']}, most likely human move: {top}")

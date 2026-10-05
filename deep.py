@@ -98,6 +98,33 @@ def brief(job):
     return key, d
 
 
+def replies(job):
+    """Their top replies to the better move, each with my best answer and the line that follows."""
+    key, fen, best_uci, me_white = job
+    me = chess.WHITE if me_white else chess.BLACK
+    eng = chess.engine.SimpleEngine.popen_uci("stockfish")
+    eng.configure({"Threads": 1, "Hash": 128})
+    board = chess.Board(fen)
+    after = board.copy()
+    after.push(chess.Move.from_uci(best_uci))
+    out = []
+    if not after.is_game_over():
+        for a in eng.analyse(after, chess.engine.Limit(depth=16), multipv=3):
+            pv = a.get("pv", [])[:7]
+            if pv:
+                out.append(dict(uci=[m.uci() for m in pv], line=after.variation_san(pv), eval=score(a, me)))
+    eng.quit()
+    return key, out
+
+
+def best_of(d, fen):
+    """First move of the deep top line (falls back to None)."""
+    from explain import parse_line
+    top = (d.get("best_moves") or [{}])[0]
+    mv = parse_line(chess.Board(fen), top.get("line", ""), 1)
+    return mv[0].uci() if mv else None
+
+
 def main():
     games = json.loads((DATA / "analysis.json").read_text())
     cache = json.loads(OUT.read_text()) if OUT.exists() else {}
@@ -119,6 +146,23 @@ def main():
             cache[key] = d
             if i % 50 == 0:
                 print(f"  {i}/{len(jobs)}", file=sys.stderr)
+                OUT.write_text(json.dumps(cache))
+        OUT.write_text(json.dumps(cache))
+        # branches after the better move, for entries that don't have them yet
+        rjobs = []
+        for g in games:
+            for e in g["errors"]:
+                key = f'{g["id"]}#{e["ply"]}'
+                d = cache.get(key)
+                if d is not None and "replies" not in d:
+                    b = best_of(d, e["fen"]) or e["best"]
+                    d["replies_after"] = b
+                    rjobs.append((key, e["fen"], b, g["color"] == "white"))
+        print(f"deep: adding reply branches for {len(rjobs)}", file=sys.stderr)
+        for i, (key, r) in enumerate(pool.imap_unordered(replies, rjobs), 1):
+            cache[key]["replies"] = r
+            if i % 50 == 0:
+                print(f"  {i}/{len(rjobs)}", file=sys.stderr)
                 OUT.write_text(json.dumps(cache))
     OUT.write_text(json.dumps(cache))
 

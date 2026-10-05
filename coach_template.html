@@ -92,13 +92,13 @@ a{color:var(--accent)}
 .sidecol{display:flex;flex-direction:column;gap:8px;min-width:0}
 .toolbar{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-height:30px;font-size:13px;color:var(--text-2);flex-wrap:wrap}
 .toolbar code{font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);color:var(--text);padding:3px 8px;border-radius:6px}
-.toolbar a{color:var(--accent);text-decoration:none;font-weight:500} .toolbar a:hover{text-decoration:underline}
+.toolbar a{color:var(--accent);text-decoration:none;font-weight:500;white-space:nowrap} .toolbar code{white-space:nowrap} .toolbar a:hover{text-decoration:underline}
 .toolbar .key{display:inline-flex;align-items:center;gap:5px;margin-right:auto}
 .toolbar .key i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:6px} .toolbar .key i:first-child{margin-left:0}
 .iconbtn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--line);background:var(--surface);color:var(--text-2);border-radius:7px;cursor:pointer;padding:0;font:inherit}
 .iconbtn:hover{color:var(--text);border-color:var(--muted)}
 @media (min-width:821px) and (max-width:1080px){.toolbar{flex-wrap:wrap;row-gap:4px;justify-content:flex-start}.toolbar .key{flex-basis:100%;margin-right:0}}
-@media (max-width:520px){.toolbar{gap:6px;font-size:12px;flex-wrap:nowrap}.toolbar code{font-size:11px;padding:2px 6px}.toolbar .key{gap:3px}.toolbar .key i{margin-left:4px}}
+@media (max-width:520px){.toolbar{gap:6px;font-size:12px;flex-wrap:wrap;row-gap:4px;justify-content:flex-start}.toolbar .key{flex-basis:100%;margin-right:0}.toolbar code{font-size:11px;padding:2px 6px}.toolbar .key{gap:3px}.toolbar .key i{margin-left:4px}}
 .btn.small{padding:3px 10px;font-size:12px}
 .cardhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .cardhead h3{margin:0}
@@ -114,19 +114,20 @@ a{color:var(--accent)}
 .boardnav .btn{height:40px;padding:0 12px;font-size:14px;flex:none}
 .boardnav .btn.sq{width:40px;padding:0;font-size:16px;display:inline-flex;align-items:center;justify-content:center}
 .boardnav select{flex:1;min-width:0;height:40px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:0 10px;font:inherit;font-size:14px}
-.boardnav .dots{flex-wrap:wrap;justify-content:flex-end;max-width:120px}
+.boardnav .dots{flex-wrap:wrap;justify-content:flex-end;max-width:180px;gap:4px}.boardnav .dots span{width:8px;height:8px}
 .movelist{font-size:14px;line-height:1.9} .movelist span{padding:1px 4px;border-radius:4px;cursor:pointer} .movelist span.on{background:var(--accent);color:#fff}
 
 /* board */
 .board{position:relative;width:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;user-select:none;box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .board .sqs{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;height:100%}
 .board .s{position:relative} .board .s.l{background:var(--sq-light)} .board .s.d{background:var(--sq-dark)}
-.board .s.last::after,.board .s.bad::after,.board .s.good::after,.board .s.sel::after,.board .s.reply::after{content:"";position:absolute;inset:0}
+.board .s.last::after,.board .s.bad::after,.board .s.good::after,.board .s.sel::after,.board .s.reply::after,.board .s.mine::after{content:"";position:absolute;inset:0}
 .board .s.last::after{background:rgba(155,199,0,.42)}
 .board .s.sel::after{background:rgba(20,85,30,.5)}
 .board .s.bad::after{background:rgba(220,40,40,.45)}
 .board .s.good::after{background:rgba(20,160,20,.45)}
 .board .s.reply::after{background:rgba(235,130,0,.45)}
+.board .s.mine::after{background:rgba(42,120,214,.4)}
 .board .s.dest::before{content:"";position:absolute;left:36%;top:36%;width:28%;height:28%;border-radius:50%;background:rgba(20,85,30,.45);z-index:2}
 .board .s.dest.cap::before{left:4%;top:4%;width:92%;height:92%;background:none;border:5px solid rgba(20,85,30,.45)}
 .board .pc{position:absolute;inset:0;background-size:100% 100%;z-index:1;cursor:pointer}
@@ -175,7 +176,7 @@ a{color:var(--accent)}
       </div>
     </div>
     <div class="sidecol">
-      <div class="toolbar"><span class="key"><i style="background:var(--bad)"></i>yours<i style="background:#eb8200"></i>theirs<i style="background:var(--good)"></i>better</span><code id="mk-ref"></code><button class="iconbtn" id="mk-copy" title="Copy for Claude" aria-label="Copy for Claude"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><a id="mk-lichess" target="_blank" rel="noopener" title="Open this position on Lichess">Analyse ↗</a></div>
+      <div class="toolbar"><span class="key"><i style="background:var(--bad)"></i>mistake<i style="background:#2a78d6"></i>yours<i style="background:#eb8200"></i>theirs<i style="background:var(--good)"></i>better</span><code id="mk-ref"></code><button class="iconbtn" id="mk-copy" title="Copy for Claude" aria-label="Copy for Claude"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><a id="mk-lichess" target="_blank" rel="noopener" title="Open this position on Lichess">Analyse ↗</a></div>
     <div class="panel card">
       <div class="meta" id="mk-meta"></div>
       <div id="mk-tags"></div>
@@ -271,7 +272,7 @@ const shuffle = (a, seed=7) => { a = a.slice(); let s = seed; for (let i = a.len
 
 /* ---------- board ---------- */
 const FILES = 'abcdefgh';
-const ARROW = {bad:'#d03b3b', reply:'#eb8200', good:'#15a015', info:'#2a78d6'};
+const ARROW = {bad:'#d03b3b', reply:'#eb8200', good:'#15a015', info:'#2a78d6', mine:'#2a78d6'};
 class Board {
   constructor(el, onMove){
     this.el = el; this.onMove = onMove; this.sel = null; this.state = {};
@@ -514,20 +515,25 @@ const Mistakes = {
   init(){
     this.all = DATA.errors.slice().reverse(); // newest first
     this.board = new Board($('mk-board'));
-    this.filter('all');
-    chips($('mk-cats'), catChips(this.all), 'all', k => this.filter(k));
+    // restore the last filter / mistake / step (by ref, so new games don't shift it)
+    const st = store.get('mk-pos', {}), cats = catChips(this.all);
+    const cat = cats.some(c => c[0] === st.cat) ? st.cat : 'all';
+    chips($('mk-cats'), cats, cat, k => this.filter(k));
+    this.cat = cat; this.list = cat === 'all' ? this.all : this.all.filter(e => e.category === cat);
+    this.i = Math.max(0, this.list.findIndex(e => e.ref === st.ref));
+    this.load(st.ref && this.list[this.i].ref === st.ref ? st.step || 0 : 0);
     $('mk-fwd').onclick = () => this.fwd(); $('mk-back').onclick = () => this.back();
     $('mk-next').onclick = () => this.go(1); $('mk-prev').onclick = () => this.go(-1);
     $('mk-copy').onclick = () => copyText(this.copyText(), $('mk-copy'));
   },
-  filter(k){ this.list = k === 'all' ? this.all : this.all.filter(e => e.category === k); this.i = 0; this.load(); },
+  filter(k){ this.cat = k; this.list = k === 'all' ? this.all : this.all.filter(e => e.category === k); this.i = 0; this.load(); },
   jump(ref){
     const i = this.all.findIndex(e => e.ref === ref); if (i < 0) return;
-    $('mk-cats')._dd.set('all');
+    $('mk-cats')._dd.set('all'); this.cat = 'all';
     this.list = this.all; this.i = i; this.load(); showTab('mistakes'); window.scrollTo(0, 0);
   },
   go(d){ if (!this.list.length) return; this.i = (this.i + d + this.list.length) % this.list.length; this.load(); },
-  load(){
+  load(step = 0){
     const e = this.list[this.i]; if (!e) return;
     const g = new Chess(e.fen), you = sideName(e.color), them = sideName(e.color === 'white' ? 'black' : 'white');
     const steps = [];
@@ -538,15 +544,24 @@ const Mistakes = {
       text:`You played <b>${esc(e.played_san)}</b> (red arrow). Can you see what's wrong with it?`});
     const sans = e.refute_san ? e.refute_san.replace(/\d+\.(\.\.)?\s*/g, '').split(/\s+/).filter(Boolean) : [];
     e.refute.forEach((u, k) => {
-      const m = uciMove(u); const mover = g.turn() === e.color[0] ? 'You' : 'They';
+      const m = uciMove(u), mine = g.turn() === e.color[0], mover = mine ? 'You' : 'They', c = mine ? 'mine' : 'reply';
       g.move(m);
-      steps.push({fen:g.fen(), marks:{[m.from]:'reply', [m.to]:'reply'}, arrows:[{from:m.from, to:m.to, color:'reply'}],
+      steps.push({fen:g.fen(), marks:{[m.from]:c, [m.to]:c}, arrows:[{from:m.from, to:m.to, color:c}],
         text:(k === 0 ? `<b>${esc(sans[k] || u)}</b> — that's the punishment. ${esc(e.why)}` : `${mover} continue: <b>${esc(sans[k] || u)}</b>.`) + `<br><span class="meta">Engine line: ${esc(e.refute_san)}</span>`});
     });
-    const b = uciMove(e.best);
+    const b = uciMove(e.best_deep || e.best), bsan = new Chess(e.fen).move(b).san;
     steps.push({fen:e.fen, marks:{[b.from]:'good', [b.to]:'good'}, arrows:[{from:b.from, to:b.to, color:'good'}],
-      text:`Better was <b>${esc(e.best_san)}</b> (green arrow).<br><span class="meta">Best line: ${esc(e.best_line)}</span>`});
-    this.steps = steps; this.step = 0;
+      text:`Better was <b>${esc(bsan)}</b> (green arrow). ${esc(e.best_why || '')}` +
+        (e.branches && e.branches.length ? `<br><span class="meta">Next: how it holds up against their ${e.branches.length} main replies.</span>` : `<br><span class="meta">Best line: ${esc(e.best_line)}</span>`)});
+    (e.branches || []).forEach((br, k) => {
+      const bg = new Chess(e.fen); bg.move(b);
+      const r = uciMove(br.uci[0]); bg.move(r);
+      const marks = {[r.from]:'reply', [r.to]:'reply'}, arrows = [{from:r.from, to:r.to, color:'reply'}];
+      if (br.uci[1]){ const a = uciMove(br.uci[1]); bg.move(a); marks[a.from] = 'mine'; marks[a.to] = 'mine'; arrows.push({from:a.from, to:a.to, color:'mine'}); }
+      steps.push({fen:bg.fen(), marks, arrows,
+        text:`<b>Reply ${k+1} of ${e.branches.length}</b> after ${esc(bsan)}: ${esc(br.text)}<br><span class="meta">Line: ${esc(br.line)}</span>`});
+    });
+    this.steps = steps; this.step = Math.max(0, Math.min(step, steps.length - 1));
     $('mk-meta').innerHTML = `Game ${e.game_no} of ${DATA.overview.games} · ${fmtDate(e.date)} (${ago(e.date)}) · move ${e.move_no} · ${you} vs ${esc(e.opponent)} (${e.opp_elo}) · ${e.result}` + (e.link ? ` · <a href="${esc(e.link)}" target="_blank" rel="noopener">game</a>` : '');
     $('mk-tags').innerHTML = errorTags(e);
     $('mk-cat').innerHTML = `<b>Type: ${esc(catName(e.category))}</b><br>${esc((CAT[e.category] || CAT.other)[1])}`;
@@ -560,6 +575,7 @@ const Mistakes = {
     $('mk-dots').innerHTML = this.steps.map((_, k) => `<span class="${k <= this.step ? 'on' : ''}"></span>`).join('');
     $('mk-back').disabled = this.step === 0;
     $('mk-stepn').textContent = `Step ${this.step+1}/${this.steps.length}`;
+    store.set('mk-pos', {cat: this.cat, ref: e.ref, step: this.step});
     $('mk-fwd').title = this.step === this.steps.length-1 ? 'Next mistake (→)' : 'Next step (→)';
     $('mk-ref').textContent = `${e.ref} s${this.step+1}/${this.steps.length}`;
     $('mk-lichess').href = lichess(s.fen, e.color);
@@ -572,6 +588,8 @@ const Mistakes = {
       gameLine(e),
       `Mistake: I played ${moveTag(e)}${e.played_san} (${e.severity}, type "${catName(e.category)}", win chance dropped ${e.drop} points). Engine best: ${e.best_line}. Engine line after my move: ${e.refute_san || '-'}.`,
       `Step ${this.step+1} of ${this.steps.length} on screen: ${plain(s.text)}`,
+      ...(e.best_why ? [`Why the better move is better: ${e.best_why}`] : []),
+      ...(e.branches || []).map(b => `  Branch: ${b.text} Line: ${b.line}`),
       `Board at this step (FEN): ${s.fen}`,
       `Position before my move (FEN): ${e.fen}`,
       `Cached analysis: ~/Personal/chess/lookup ${e.ref}`].join('\n');
@@ -584,22 +602,26 @@ const Practice = {
     this.all = shuffle(DATA.errors.filter(e => e.severity === 'blunder'), 11);
     this.done = store.get('practice', {});
     this.board = new Board($('pr-board'), u => this.move(u));
-    chips($('pr-cats'), catChips(this.all), 'all', k => this.filter(k));
+    const st = store.get('pr-pos', {}), cats = catChips(this.all);
+    const cat = cats.some(c => c[0] === st.cat) ? st.cat : 'all';
+    chips($('pr-cats'), cats, cat, k => this.filter(k));
     $('pr-next').onclick = () => this.next(); $('pr-hint').onclick = () => this.hint(); $('pr-show').onclick = () => this.reveal();
     $('pr-copy').onclick = () => copyText(this.copyText(), $('pr-copy'));
-    this.filter('all');
+    this.filter(cat, st.key);
   },
   key(e){ return e.game_id + '#' + e.ply; },
-  filter(k){
+  filter(k, key){
+    this.cat = k;
     const l = k === 'all' ? this.all : this.all.filter(e => e.category === k);
     // unsolved first
     this.list = l.filter(e => this.done[this.key(e)] !== 'solved').concat(l.filter(e => this.done[this.key(e)] === 'solved'));
-    this.i = 0; this.load();
+    this.i = key ? Math.max(0, this.list.findIndex(e => this.key(e) === key)) : 0; this.load();
   },
   next(){ this.i = (this.i + 1) % this.list.length; this.load(); },
   load(){
     const e = this.list[this.i]; if (!e) return;
     this.e = e; this.tries = 0; this.hints = 0; this.over = false; this.tried = [];
+    store.set('pr-pos', {cat: this.cat, key: this.key(e)});
     $('pr-ref').textContent = `${e.ref} practice`;
     $('pr-lichess').href = lichess(e.fen, e.color);
     this.game = new Chess(e.fen);
@@ -649,6 +671,7 @@ const Practice = {
     $('pr-msg').innerHTML = (others.length >= 2
       ? `Several moves are fine here: <b>${esc(e.best_san)}</b>, ${others.map(esc).join(', ')}. The real lesson is to avoid what you played.`
       : `The answer: <b>${esc(e.best_san)}</b>.`) +
+      (e.best_why ? `<br>${esc(e.best_why)}` : '') +
       `<br><span class="meta">Engine line: ${esc(e.best_line)}. In the game you played ${esc(e.played_san)}: ${esc(e.why)}</span>` +
       `<div class="cat" style="margin-top:8px"><b>Type: ${esc(catName(e.category))}</b><br>${esc((CAT[e.category] || CAT.other)[1])}</div>`;
     this.score();
@@ -677,15 +700,18 @@ const Puzzles = {
     this.done = store.get('puzzles', {});
     this.board = new Board($('pz-board'), u => this.move(u));
     const themes = Object.entries(DATA.puzzles);
-    chips($('pz-themes'), themes.map(([k,t]) => [k, t.label, t.puzzles.length]), themes[0][0], k => this.theme(k));
+    const st = store.get('pz-pos', {}), theme = DATA.puzzles[st.theme] ? st.theme : themes[0][0];
+    chips($('pz-themes'), themes.map(([k,t]) => [k, t.label, t.puzzles.length]), theme, k => this.theme(k));
     $('pz-next').onclick = () => this.next(); $('pz-hint').onclick = () => this.hint(); $('pz-show').onclick = () => this.showMove();
     $('pz-copy').onclick = () => copyText(this.copyText(), $('pz-copy'));
-    this.theme(themes[0][0]);
+    this.theme(theme, st.id);
   },
-  theme(k){ this.k = k; const l = DATA.puzzles[k].puzzles; this.list = l.filter(p => !this.done[p.id]).concat(l.filter(p => this.done[p.id])); this.i = 0; this.load(); },
+  theme(k, id){ this.k = k; const l = DATA.puzzles[k].puzzles; this.list = l.filter(p => !this.done[p.id]).concat(l.filter(p => this.done[p.id]));
+    this.i = id ? Math.max(0, this.list.findIndex(p => p.id === id)) : 0; this.load(); },
   next(){ this.i = (this.i + 1) % this.list.length; this.load(); },
   load(){
     const p = this.list[this.i]; this.p = p; this.n = 0; this.failed = false; this.over = false; this.hints = 0;
+    store.set('pz-pos', {theme: this.k, id: p.id});
     this.g = new Chess(p.fen);
     this.orient = this.g.turn() === 'w' ? 'black' : 'white';
     this.board.set({fen:p.fen, orient:this.orient});
@@ -764,10 +790,11 @@ const Openings = {
     $('op-fwd').onclick = () => this.fwd(); $('op-back').onclick = () => this.back();
     $('op-seen').onclick = e => { const a = e.target.closest('a[data-ref]'); if (a){ e.preventDefault(); Mistakes.jump(a.dataset.ref); } };
     $('op-copy').onclick = () => copyText(this.copyText(), $('op-copy'));
-    this.pick(0);
+    const st = store.get('op-pos', {}), li = DATA.openings.findIndex(l => l.name === st.name);
+    this.pick(li >= 0 ? li : 0, li >= 0 ? st.k || 0 : 0);
   },
-  pick(i){
-    this.line = DATA.openings[i]; this.li = i; this.k = 0;
+  pick(i, k = 0){
+    this.line = DATA.openings[i]; this.li = i; this.k = Math.max(0, Math.min(k, this.line.moves.length));
     this.dd.set(i);
     const g = new Chess(); this.fens = [g.fen()];
     this.line.moves.forEach(m => { g.move(uciMove(m.uci)); this.fens.push(g.fen()); });
@@ -775,6 +802,7 @@ const Openings = {
   },
   show(){
     const L = this.line, k = this.k, m = L.moves[k-1];
+    store.set('op-pos', {name: L.name, k});
     this.board.set({fen:this.fens[k], orient:L.side, marks: m ? {[m.uci.slice(0,2)]:'last', [m.uci.slice(2,4)]:'last'} : {},
       arrows: m ? [{from:m.uci.slice(0,2), to:m.uci.slice(2,4), color: m.bad ? 'bad' : 'info'}] : []});
     $('op-msg').innerHTML = k === 0 ? `<b>${esc(L.name)}</b><br>${esc(L.intro)}` : `<b>${esc(m.label)}</b>${m.note ? ' — ' + esc(m.note) : ''}`;
