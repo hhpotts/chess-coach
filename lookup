@@ -1,0 +1,3 @@
+#!/bin/zsh
+# Usage: ./lookup G47-11w   (or paste a whole "Copy for Claude" block as the argument / on stdin)
+cd "${0:A:h}" && exec .venv/bin/python lookup.py "$@" 2>/dev/null
