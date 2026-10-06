@@ -204,6 +204,7 @@ a{color:var(--accent)}
         <button class="btn" id="pr-hint">Hint</button>
         <button class="btn" id="pr-show">Answer</button>
         <span class="grow"></span>
+        <button class="btn sq" id="pr-prev" title="Previous position" aria-label="Previous position">◀</button>
         <button class="btn primary" id="pr-next" title="Next position">Next ▶</button>
       </div>
     </div>
@@ -228,6 +229,7 @@ a{color:var(--accent)}
         <button class="btn" id="pz-hint">Hint</button>
         <button class="btn" id="pz-show">Show move</button>
         <span class="grow"></span>
+        <button class="btn sq" id="pz-prev" title="Previous puzzle" aria-label="Previous puzzle">◀</button>
         <button class="btn primary" id="pz-next" title="Next puzzle">Next ▶</button>
       </div>
     </div>
@@ -252,6 +254,7 @@ a{color:var(--accent)}
         <button class="btn primary" id="sp-check">Check</button>
         <button class="btn" id="sp-show">Show</button>
         <span class="grow"></span>
+        <button class="btn sq" id="sp-prev" title="Previous position" aria-label="Previous position">◀</button>
         <button class="btn" id="sp-next" title="Next position">Next ▶</button>
       </div>
     </div>
@@ -645,6 +648,7 @@ const Practice = {
     const st = store.get('pr-pos', {}), cats = catChips(this.all);
     const cat = cats.some(c => c[0] === st.cat) ? st.cat : 'all';
     chips($('pr-cats'), cats, cat, k => this.filter(k));
+    $('pr-prev').onclick = () => this.prev();
     $('pr-next').onclick = () => this.next(); $('pr-hint').onclick = () => this.hint(); $('pr-show').onclick = () => this.reveal();
     $('pr-copy').onclick = () => copyText(this.copyText(), $('pr-copy'));
     this.filter(cat, st.key);
@@ -658,6 +662,7 @@ const Practice = {
     this.i = key ? Math.max(0, this.list.findIndex(e => this.key(e) === key)) : 0; this.load();
   },
   next(){ this.i = (this.i + 1) % this.list.length; this.load(); },
+  prev(){ this.i = (this.i - 1 + this.list.length) % this.list.length; this.load(); },
   load(){
     const e = this.list[this.i]; if (!e) return;
     this.e = e; this.tries = 0; this.hints = 0; this.over = false; this.tried = [];
@@ -745,6 +750,7 @@ const Spot = {
     const st = store.get('sp-pos', {}), f = this.FILTERS.some(x => x[0] === st.f) ? st.f : 'kd';
     chips($('sp-filter'), this.FILTERS.map(([k, l]) => [k, l, this.all.filter(p => this.match(p, k)).length]), f, k => this.filter(k));
     $('sp-check').onclick = () => this.check(); $('sp-show').onclick = () => this.check(true); $('sp-next').onclick = () => this.next();
+    $('sp-prev').onclick = () => this.prev();
     $('sp-copy').onclick = () => copyText(this.copyText(), $('sp-copy'));
     this.filter(f, st.ref);
   },
@@ -755,6 +761,7 @@ const Spot = {
     this.i = ref ? Math.max(0, this.list.findIndex(p => p.ref === ref)) : 0; this.load();
   },
   next(){ this.i = (this.i + 1) % this.list.length; this.load(); },
+  prev(){ this.i = (this.i - 1 + this.list.length) % this.list.length; this.load(); },
   load(){
     const p = this.list[this.i]; this.p = p; this.picked = new Set(); this.checked = false; this.revealed = false;
     store.set('sp-pos', {f: this.f, ref: p.ref});
@@ -825,6 +832,7 @@ const Puzzles = {
     const themes = Object.entries(DATA.puzzles);
     const st = store.get('pz-pos', {}), theme = DATA.puzzles[st.theme] ? st.theme : themes[0][0];
     chips($('pz-themes'), themes.map(([k,t]) => [k, t.label, t.puzzles.length]), theme, k => this.theme(k));
+    $('pz-prev').onclick = () => this.prev();
     $('pz-next').onclick = () => this.next(); $('pz-hint').onclick = () => this.hint(); $('pz-show').onclick = () => this.showMove();
     $('pz-copy').onclick = () => copyText(this.copyText(), $('pz-copy'));
     this.theme(theme, st.id);
@@ -832,6 +840,7 @@ const Puzzles = {
   theme(k, id){ this.k = k; const l = DATA.puzzles[k].puzzles; this.list = l.filter(p => !this.done[p.id]).concat(l.filter(p => this.done[p.id]));
     this.i = id ? Math.max(0, this.list.findIndex(p => p.id === id)) : 0; this.load(); },
   next(){ this.i = (this.i + 1) % this.list.length; this.load(); },
+  prev(){ this.i = (this.i - 1 + this.list.length) % this.list.length; this.load(); },
   load(){
     const p = this.list[this.i]; this.p = p; this.n = 0; this.failed = false; this.over = false; this.hints = 0;
     store.set('pz-pos', {theme: this.k, id: p.id});
