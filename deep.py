@@ -9,6 +9,7 @@ from pathlib import Path
 DATA = Path(__file__).parent / "data"
 OUT = DATA / "deep.json"
 DEPTH = 18
+DANGER_RULE = 2  # bump when in_danger() changes so cached lists get recomputed
 VAL = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 100}
 
 
@@ -44,7 +45,9 @@ def in_danger(board, me):
     for sq, pc in board.piece_map().items():
         if pc.color != me or pc.piece_type == chess.KING:
             continue
-        attackers = board.attackers(not me, sq)
+        # a pinned attacker can only take along its pin line
+        attackers = [a for a in board.attackers(not me, sq)
+                     if not board.is_pinned(not me, a) or sq in board.pin(not me, a)]
         if not attackers:
             continue
         cheapest = min(VAL[board.piece_at(a).piece_type] for a in attackers)
@@ -148,6 +151,13 @@ def main():
                 print(f"  {i}/{len(jobs)}", file=sys.stderr)
                 OUT.write_text(json.dumps(cache))
         OUT.write_text(json.dumps(cache))
+        # refresh the (engine-free) danger lists when the rule changes
+        for g in games:
+            for e in g["errors"]:
+                c = cache.get(f'{g["id"]}#{e["ply"]}')
+                if c is not None and c.get("danger_rule") != DANGER_RULE:
+                    c["my_pieces_in_danger"] = in_danger(chess.Board(e["fen"]), chess.Board(e["fen"]).turn)
+                    c["danger_rule"] = DANGER_RULE
         # branches after the better move, for entries that don't have them yet
         rjobs = []
         for g in games:

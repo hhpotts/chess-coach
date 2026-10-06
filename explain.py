@@ -244,13 +244,19 @@ def punish_shape(e):
     return shape(a, r.to_square, best)
 
 
+def can_take(board, frm, to):
+    """An attacker pinned to its own king can only capture along the pin line."""
+    color = board.piece_at(frm).color
+    return not board.is_pinned(color, frm) or to in board.pin(color, frm)
+
+
 def danger(board):
     """Side-to-move's pieces that are attacked and undefended or attacked by something cheaper."""
     me, out = board.turn, []
     for sq, pc in board.piece_map().items():
         if pc.color != me or pc.piece_type == chess.KING:
             continue
-        att = list(board.attackers(not me, sq))
+        att = [a for a in board.attackers(not me, sq) if can_take(board, a, sq)]
         if not att:
             continue
         defended = bool(board.attackers(me, sq))
