@@ -207,3 +207,57 @@ def branch_summary(br):
     if worst >= 100:
         return f" Against their best tries you stay better (worst case {worst / 100:+.1f})."
     return f" Their best defence is {br[evals.index(worst)]['reply']}, which keeps it {standing(worst)}."
+
+
+def shape(board, frm, to):
+    """How the piece on `frm` attacks `to`: knight, diagonal (incl. pawns), straight, king."""
+    t = board.piece_at(frm).piece_type
+    if t == chess.KNIGHT:
+        return "knight"
+    if t == chess.KING:
+        return "king"
+    if t == chess.PAWN:
+        return "diagonal"
+    same_line = chess.square_file(frm) == chess.square_file(to) or chess.square_rank(frm) == chess.square_rank(to)
+    return "straight" if same_line else "diagonal"
+
+
+def punish_shape(e):
+    """Shape of their punishing reply after my move, for mistakes where they attack/capture/check."""
+    if not e.get("refute") or e["category"] in ("missed-capture", "missed-mate"):
+        return None
+    b = chess.Board(e["fen"])
+    b.push(chess.Move.from_uci(e["played"]))
+    r = chess.Move.from_uci(e["refute"][0])
+    if b.piece_at(r.from_square) is None:
+        return None
+    if b.is_capture(r) or b.gives_check(r):
+        return shape(b, r.from_square, r.to_square)
+    # quiet reply (e.g. a fork): shape of the attack it creates on my most valuable piece
+    a = b.copy()
+    a.push(r)
+    them = a.piece_at(r.to_square).color
+    targets = [s for s in a.attacks(r.to_square) if a.piece_at(s) and a.piece_at(s).color != them and a.piece_at(s).piece_type != chess.PAWN]
+    if not targets:
+        return None
+    best = max(targets, key=lambda s: VAL[a.piece_at(s).piece_type] or 100)
+    return shape(a, r.to_square, best)
+
+
+def danger(board):
+    """Side-to-move's pieces that are attacked and undefended or attacked by something cheaper."""
+    me, out = board.turn, []
+    for sq, pc in board.piece_map().items():
+        if pc.color != me or pc.piece_type == chess.KING:
+            continue
+        att = list(board.attackers(not me, sq))
+        if not att:
+            continue
+        defended = bool(board.attackers(me, sq))
+        cheapest = min(VAL[board.piece_at(a).piece_type] or 100 for a in att)
+        if defended and cheapest >= VAL[pc.piece_type]:
+            continue
+        out.append(dict(sq=chess.square_name(sq), piece=chess.piece_name(pc.piece_type), defended=defended,
+                        attackers=[dict(sq=chess.square_name(a), piece=chess.piece_name(board.piece_at(a).piece_type),
+                                        shape=shape(board, a, sq)) for a in att]))
+    return out

@@ -58,6 +58,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 @media (max-width:820px){.trainer{grid-template-columns:minmax(0,1fr)}}
 .panel{display:flex;flex-direction:column;gap:12px}
 .filterbar{margin-bottom:14px}
+.filterrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filterrow .filterbar{margin-bottom:0}
 .dd{position:relative;display:inline-block;max-width:100%}
 .dd.fill{display:block;flex:1;min-width:0}
 .dd-btn{display:flex;align-items:center;gap:8px;width:100%;min-width:300px;height:40px;padding:0 12px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;font:inherit;font-size:14px;cursor:pointer;text-align:left}
@@ -121,13 +123,17 @@ a{color:var(--accent)}
 .board{position:relative;width:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;user-select:none;box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .board .sqs{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;height:100%}
 .board .s{position:relative} .board .s.l{background:var(--sq-light)} .board .s.d{background:var(--sq-dark)}
-.board .s.last::after,.board .s.bad::after,.board .s.good::after,.board .s.sel::after,.board .s.reply::after,.board .s.mine::after{content:"";position:absolute;inset:0}
+.board .s.last::after,.board .s.bad::after,.board .s.good::after,.board .s.sel::after,.board .s.reply::after,.board .s.mine::after,.board .s.pick::after,.board .s.hitok::after,.board .s.missed::after,.board .s.wrong::after{content:"";position:absolute;inset:0}
 .board .s.last::after{background:rgba(155,199,0,.42)}
 .board .s.sel::after{background:rgba(20,85,30,.5)}
 .board .s.bad::after{background:rgba(220,40,40,.45)}
 .board .s.good::after{background:rgba(20,160,20,.45)}
 .board .s.reply::after{background:rgba(235,130,0,.45)}
 .board .s.mine::after{background:rgba(42,120,214,.4)}
+.board .s.pick::after{box-shadow:inset 0 0 0 4px #2a78d6}
+.board .s.hitok::after{background:rgba(20,160,20,.45)}
+.board .s.missed::after{background:rgba(220,40,40,.3);box-shadow:inset 0 0 0 4px #d03b3b}
+.board .s.wrong::after{box-shadow:inset 0 0 0 4px #eb8200}
 .board .s.dest::before{content:"";position:absolute;left:36%;top:36%;width:28%;height:28%;border-radius:50%;background:rgba(20,85,30,.45);z-index:2}
 .board .s.dest.cap::before{left:4%;top:4%;width:92%;height:92%;background:none;border:5px solid rgba(20,85,30,.45)}
 .board .pc{position:absolute;inset:0;background-size:100% 100%;z-index:1;cursor:pointer}
@@ -147,6 +153,7 @@ a{color:var(--accent)}
     <button data-t="overview" class="on">Overview</button>
     <button data-t="mistakes">My mistakes</button>
     <button data-t="practice">Practice</button>
+    <button data-t="spot">Spot the danger</button>
     <button data-t="puzzles">Puzzles</button>
     <button data-t="openings">Openings</button>
   </nav>
@@ -158,7 +165,7 @@ a{color:var(--accent)}
 <section id="mistakes">
   <h2>My mistakes</h2>
   <p class="sub">Every serious error from your games, step by step. Use ← → to step, ↑ ↓ for the previous/next mistake.</p>
-  <div class="filterbar" id="mk-cats" data-label="Filter by type:"></div>
+  <div class="filterrow"><div class="filterbar" id="mk-cats" data-label="Filter by type:"></div><div class="filterbar" id="mk-shape" data-label="Attack shape:"></div></div>
   <div class="trainer">
     <div><div id="mk-board"></div>
       <div class="boardnav splitnav">
@@ -230,6 +237,30 @@ a{color:var(--accent)}
       <div class="meta" id="pz-meta"></div>
       <div class="msg" id="pz-msg"></div>
       <div class="kbd" id="pz-score"></div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<section id="spot">
+  <h2>Spot the danger</h2>
+  <p class="sub">Positions from your games, just before a mistake. Click every piece of yours that's in danger (attacked and undefended, or attacked by something worth less), then press Check. No move to find: this trains seeing.</p>
+  <div class="filterbar" id="sp-filter" data-label="Show:"></div>
+  <div class="trainer">
+    <div><div id="sp-board"></div>
+      <div class="boardnav">
+        <button class="btn primary" id="sp-check">Check</button>
+        <button class="btn" id="sp-show">Show</button>
+        <span class="grow"></span>
+        <button class="btn" id="sp-next" title="Next position">Next ▶</button>
+      </div>
+    </div>
+    <div class="sidecol">
+      <div class="toolbar"><code id="sp-ref"></code><button class="iconbtn" id="sp-copy" title="Copy for Claude" aria-label="Copy for Claude"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><a id="sp-lichess" target="_blank" rel="noopener" title="Open this position on Lichess">Analyse ↗</a></div>
+    <div class="panel card">
+      <div class="meta" id="sp-meta"></div>
+      <div class="msg" id="sp-msg"></div>
+      <div class="kbd" id="sp-score"></div>
     </div>
     </div>
   </div>
@@ -311,6 +342,7 @@ class Board {
     }).join('');
   }
   click(sq){
+    if (this.state.pickMode && this.onSquare){ this.onSquare(sq); return; }
     const g = this.state.game; if (!this.state.interactive || !g) return;
     const p = g.get(sq);
     if (this.sel && this.sel !== sq){
@@ -519,22 +551,30 @@ const Mistakes = {
     const st = store.get('mk-pos', {}), cats = catChips(this.all);
     const cat = cats.some(c => c[0] === st.cat) ? st.cat : 'all';
     chips($('mk-cats'), cats, cat, k => this.filter(k));
-    this.cat = cat; this.list = cat === 'all' ? this.all : this.all.filter(e => e.category === cat);
+    const sc = k => this.all.filter(e => e.shape === k).length;
+    const shapes = [['all', 'Any'], ['knight', 'Knight', sc('knight')], ['diagonal', 'Diagonal (bishop, queen, pawn)', sc('diagonal')],
+                    ['straight', 'Straight line (rook, queen)', sc('straight')], ['king', 'King', sc('king')]];
+    const shp = shapes.some(x => x[0] === st.shape) ? st.shape : 'all';
+    chips($('mk-shape'), shapes, shp, k => this.filterShape(k));
+    this.cat = cat; this.shape = shp; this.list = this.matching();
     this.i = Math.max(0, this.list.findIndex(e => e.ref === st.ref));
     this.load(st.ref && this.list[this.i].ref === st.ref ? st.step || 0 : 0);
     $('mk-fwd').onclick = () => this.fwd(); $('mk-back').onclick = () => this.back();
     $('mk-next').onclick = () => this.go(1); $('mk-prev').onclick = () => this.go(-1);
     $('mk-copy').onclick = () => copyText(this.copyText(), $('mk-copy'));
   },
-  filter(k){ this.cat = k; this.list = k === 'all' ? this.all : this.all.filter(e => e.category === k); this.i = 0; this.load(); },
+  matching(){ return this.all.filter(e => (this.cat === 'all' || e.category === this.cat) && (this.shape === 'all' || e.shape === this.shape)); },
+  filter(k){ this.cat = k; this.list = this.matching(); this.i = 0; this.load(); },
+  filterShape(k){ this.shape = k; this.list = this.matching(); this.i = 0; this.load(); },
   jump(ref){
     const i = this.all.findIndex(e => e.ref === ref); if (i < 0) return;
-    $('mk-cats')._dd.set('all'); this.cat = 'all';
+    $('mk-cats')._dd.set('all'); $('mk-shape')._dd.set('all'); this.cat = 'all'; this.shape = 'all';
     this.list = this.all; this.i = i; this.load(); showTab('mistakes'); window.scrollTo(0, 0);
   },
   go(d){ if (!this.list.length) return; this.i = (this.i + d + this.list.length) % this.list.length; this.load(); },
   load(step = 0){
-    const e = this.list[this.i]; if (!e) return;
+    const e = this.list[this.i];
+    if (!e){ $('mk-msg').textContent = 'No mistakes match both filters.'; $('mk-count').textContent = 'Mistake 0/0'; return; }
     const g = new Chess(e.fen), you = sideName(e.color), them = sideName(e.color === 'white' ? 'black' : 'white');
     const steps = [];
     const prev = e.prev ? {[e.prev.slice(0,2)]:'last', [e.prev.slice(2,4)]:'last'} : {};
@@ -575,7 +615,7 @@ const Mistakes = {
     $('mk-dots').innerHTML = this.steps.map((_, k) => `<span class="${k <= this.step ? 'on' : ''}"></span>`).join('');
     $('mk-back').disabled = this.step === 0;
     $('mk-stepn').textContent = `Step ${this.step+1}/${this.steps.length}`;
-    store.set('mk-pos', {cat: this.cat, ref: e.ref, step: this.step});
+    store.set('mk-pos', {cat: this.cat, shape: this.shape, ref: e.ref, step: this.step});
     $('mk-fwd').title = this.step === this.steps.length-1 ? 'Next mistake (→)' : 'Next step (→)';
     $('mk-ref').textContent = `${e.ref} s${this.step+1}/${this.steps.length}`;
     $('mk-lichess').href = lichess(s.fen, e.color);
@@ -691,6 +731,89 @@ const Practice = {
   score(){
     const keys = this.list.map(e => this.key(e)); const solved = keys.filter(k => this.done[k] === 'solved').length;
     $('pr-score').textContent = `Position ${this.i+1} of ${this.list.length} · solved first try: ${solved}`;
+  },
+};
+
+/* ---------- spot the danger ---------- */
+const Spot = {
+  FILTERS: [['kd', 'Knights & diagonals'], ['knight', 'Knights only'], ['diagonal', 'Diagonals only (bishops, queens, pawns)'], ['all', 'All dangers']],
+  match(p, k){ return k === 'all' || (k === 'kd' ? p.shapes.some(x => x === 'knight' || x === 'diagonal') : p.shapes.includes(k)); },
+  init(){
+    this.all = shuffle(DATA.spot, 5);
+    this.done = store.get('spot', {});
+    this.board = new Board($('sp-board')); this.board.onSquare = sq => this.toggle(sq);
+    const st = store.get('sp-pos', {}), f = this.FILTERS.some(x => x[0] === st.f) ? st.f : 'kd';
+    chips($('sp-filter'), this.FILTERS.map(([k, l]) => [k, l, this.all.filter(p => this.match(p, k)).length]), f, k => this.filter(k));
+    $('sp-check').onclick = () => this.check(); $('sp-show').onclick = () => this.check(true); $('sp-next').onclick = () => this.next();
+    $('sp-copy').onclick = () => copyText(this.copyText(), $('sp-copy'));
+    this.filter(f, st.ref);
+  },
+  filter(k, ref){
+    this.f = k;
+    const l = this.all.filter(p => this.match(p, k));
+    this.list = l.filter(p => this.done[p.ref] !== 'solved').concat(l.filter(p => this.done[p.ref] === 'solved'));
+    this.i = ref ? Math.max(0, this.list.findIndex(p => p.ref === ref)) : 0; this.load();
+  },
+  next(){ this.i = (this.i + 1) % this.list.length; this.load(); },
+  load(){
+    const p = this.list[this.i]; this.p = p; this.picked = new Set(); this.checked = false; this.revealed = false;
+    store.set('sp-pos', {f: this.f, ref: p.ref});
+    $('sp-ref').textContent = `${p.ref} spot`; $('sp-lichess').href = lichess(p.fen, p.color);
+    $('sp-meta').innerHTML = `You're <b>${sideName(p.color)}</b> · move ${p.move_no} vs ${esc(p.opponent)} · ${fmtDate(p.date)} (${ago(p.date)})`;
+    $('sp-msg').className = 'msg';
+    $('sp-msg').innerHTML = (p.prev_san ? `They just played <b>${esc(p.prev_san)}</b> (highlighted). ` : '') +
+      `Click every piece of yours that's in danger, then press <b>Check</b>.<br><span class="meta">Scan each of your pieces: is a knight, bishop, queen or pawn hitting it? Is it defended?</span>`;
+    $('sp-check').disabled = false;
+    this.render(); this.score();
+  },
+  render(){
+    const p = this.p, marks = p.prev ? {[p.prev.slice(0,2)]:'last', [p.prev.slice(2,4)]:'last'} : {}, arrows = [];
+    const want = new Set(p.danger.map(d => d.sq));
+    for (const sq of this.picked) marks[sq] = this.checked ? (want.has(sq) ? 'hitok' : 'wrong') : 'pick';
+    if (this.checked) for (const d of p.danger){
+      if (!this.picked.has(d.sq)) marks[d.sq] = 'missed';
+      for (const a of d.attackers) arrows.push({from:a.sq, to:d.sq, color: this.picked.has(d.sq) ? 'good' : 'bad'});
+    }
+    this.board.set({fen:p.fen, orient:p.color, marks, arrows, pickMode: !this.checked});
+  },
+  toggle(sq){
+    const pc = new Chess(this.p.fen).get(sq);
+    if (!pc || pc.color !== this.p.color[0] || pc.type === 'k') return;
+    this.picked.has(sq) ? this.picked.delete(sq) : this.picked.add(sq);
+    this.render();
+  },
+  describe(d){
+    const by = d.attackers.map(a => `${a.piece} on ${a.sq}`).join(' and ');
+    return `your <b>${d.piece} on ${d.sq}</b>, attacked by the ${esc(by)}${d.defended ? ' (defended, but the attacker is worth less)' : ', and not defended'}`;
+  },
+  check(reveal){
+    if (this.checked) return;
+    const p = this.p, want = new Set(p.danger.map(d => d.sq));
+    const found = p.danger.filter(d => this.picked.has(d.sq)), missed = p.danger.filter(d => !this.picked.has(d.sq));
+    const wrong = [...this.picked].filter(sq => !want.has(sq));
+    this.checked = true; this.revealed = !!reveal;
+    const clean = !reveal && !missed.length && !wrong.length;
+    if (!this.done[p.ref] || clean) this.done[p.ref] = clean ? 'solved' : 'tried';
+    store.set('spot', this.done);
+    let html = reveal ? `In danger here: ` + p.danger.map(d => this.describe(d)).join('; ') + '.'
+      : clean ? `✓ Found all ${p.danger.length}: ` + found.map(d => this.describe(d)).join('; ') + '.'
+      : `Found ${found.length} of ${p.danger.length}.` + (missed.length ? ` <b>Missed</b> ${missed.map(d => this.describe(d)).join('; ')}.` : '') +
+        (wrong.length ? ` ${wrong.join(', ')} ${wrong.length > 1 ? "weren't" : "wasn't"} in danger (not attacked, or safely defended).` : '');
+    $('sp-msg').className = 'msg' + (clean ? ' good' : '');
+    $('sp-msg').innerHTML = html + `<br><span class="meta">Arrows show the attackers: green for ones you spotted, red for ones you missed.</span>`;
+    $('sp-check').disabled = true;
+    this.render(); this.score();
+  },
+  score(){
+    const l = this.all.filter(p => this.match(p, this.f)), s = l.filter(p => this.done[p.ref] === 'solved').length;
+    $('sp-score').textContent = `Position ${this.i+1} of ${this.list.length} · all found first try: ${s}`;
+  },
+  copyText(){
+    const p = this.p;
+    return [`[${p.ref} spot] Spot the danger drill`, `Game vs ${p.opponent}, ${p.date}, I was ${sideName(p.color)}, move ${p.move_no}. Their last move: ${p.prev_san || '-'}.`,
+      `Position (FEN): ${p.fen}`, `I marked: ${[...this.picked].join(', ') || 'nothing yet'}. Checked: ${this.checked ? 'yes' : 'no'}.`,
+      `(For Claude, don't reveal unless I ask: in danger = ${p.danger.map(d => `${d.piece} ${d.sq} [${d.attackers.map(a => a.piece + ' ' + a.sq + ' ' + a.shape).join(', ')}]${d.defended ? ' defended' : ' undefended'}`).join('; ')})`,
+      `Cached analysis: ~/Personal/chess/lookup ${p.ref}`].join('\n');
   },
 };
 
@@ -827,7 +950,7 @@ const Openings = {
   back(){ if (this.k > 0){ this.k--; this.show(); } },
 };
 
-Overview(); Mistakes.init(); Practice.init(); Puzzles.init(); Openings.init();
+Overview(); Mistakes.init(); Practice.init(); Spot.init(); Puzzles.init(); Openings.init();
 showTab(store.get('tab', 'overview'));
 </script>
 </body>

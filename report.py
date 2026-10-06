@@ -1,6 +1,6 @@
 """Build coach.html (overview, mistake viewer, practice, puzzles, openings) from data/*.json."""
 import chess, collections, json, re, statistics
-from explain import why_best, branches
+from explain import why_best, branches, punish_shape, danger
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -225,7 +225,7 @@ def main():
             ref = f'G{n}-{e["move_no"]}{"w" if e["ply"] % 2 == 0 else "b"}'
             d = deep.get(f'{g["id"]}#{e["ply"]}', {})
             e = dict(e, best_why=why_best(e, d) if d else "", branches=branches(e, d) if d else [],
-                     best_deep=d.get("replies_after") or e["best"])
+                     best_deep=d.get("replies_after") or e["best"], shape=punish_shape(e))
             errors.append(dict(e, ref=ref, game_no=n, game_id=g["id"], link=g["link"], date=g["date"], color=g["color"],
                                opponent=g["opponent"], opp_elo=g["opp_elo"], result=g["result"],
                                prev=prev["uci"] if prev else None, prev_san=prev["san"] if prev else None))
@@ -240,7 +240,18 @@ def main():
                 moves_by_phase["opening" if i < 20 else ("endgame" if nonpawn <= 26 else "middlegame")] += 1
             b.push(chess.Move.from_uci(p["uci"]))
     ov["phases"] = [[k, n, moves_by_phase[k]] for k, n in ov["phases"]]
-    payload = dict(overview=ov, errors=errors, puzzles=json.loads((DATA / "puzzles.json").read_text()),
+    # Spot the danger: positions before my mistakes where something of mine was already loose
+    spot, seen = [], set()
+    for e in errors:
+        if e["fen"] in seen:
+            continue
+        dl = danger(chess.Board(e["fen"]))
+        if dl:
+            seen.add(e["fen"])
+            shapes = sorted({a["shape"] for x in dl for a in x["attackers"]})
+            spot.append(dict(ref=e["ref"], fen=e["fen"], color=e["color"], date=e["date"], opponent=e["opponent"],
+                             move_no=e["move_no"], prev=e["prev"], prev_san=e["prev_san"], danger=dl, shapes=shapes))
+    payload = dict(overview=ov, errors=errors, spot=spot, puzzles=json.loads((DATA / "puzzles.json").read_text()),
                    openings=build_openings(games))
     html = (ROOT / "coach_template.html").read_text()
     html = html.replace("/*PIECES*/", pieces_css()).replace("/*DATA*/null", json.dumps(payload).replace("</", "<\\/"))
