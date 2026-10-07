@@ -81,7 +81,25 @@ def why_best(e, deep):
         cap = board.piece_at(best.to_square)
         cap_name = chess.piece_name(cap.piece_type) if cap else "pawn"
         recaptured = len(pv) > 1 and pv[1].to_square == best.to_square and after.is_capture(pv[1])
-        parts.append(f"{best_san} takes their {cap_name}" + (", and the trade comes out in your favour" if recaptured else " for free"))
+        text = f"{best_san} takes their {cap_name}" + ("" if recaptured else " for free")
+        if recaptured:
+            b1 = after.copy()
+            san1 = b1.san(pv[1])
+            b1.push(pv[1])
+            if len(pv) > 2 and pv[2].to_square == best.to_square and b1.is_capture(pv[2]):
+                rec = b1.piece_at(pv[2].from_square)
+                text += (f"; if they take back with {san1}, your {chess.piece_name(rec.piece_type)} on "
+                         f"{chess.square_name(pv[2].from_square)} recaptures ({b1.san(pv[2])})")
+                if best.from_square in chess.SquareSet(chess.between(pv[2].from_square, best.to_square)):
+                    line = "diagonal" if shape(board, pv[2].from_square, best.to_square) == "diagonal" else "line"
+                    text += f" - it was lined up behind your {chess.piece_name(moved.piece_type)} on the same {line}"
+            elif len(pv) > 2 and b1.is_capture(pv[2]):
+                got = b1.piece_at(pv[2].to_square)
+                text += (f"; if they take back with {san1}, you take their "
+                         f"{chess.piece_name(got.piece_type) if got else 'pawn'} with {b1.san(pv[2])}")
+            else:
+                text += ", and the trade comes out in your favour"
+        parts.append(text)
     danger = [(n, chess.parse_square(sq)) for n, sq in re.findall(r"^(\w+) on ([a-h][1-8])", "\n".join(deep.get("my_pieces_in_danger", [])), re.M)]
     for name, sq in danger:
         if best.from_square == sq:
