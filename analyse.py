@@ -4,10 +4,12 @@ from multiprocessing import Pool
 from pathlib import Path
 
 ME = "HarryHPotts"
-DEPTH = 14
+DEPTH = 18
+VERSION = 3  # bump to re-analyse every cached game (2: depth 18, chess.com thresholds, missed mates; 3: mates up to 5)
+MATE_WINDOW = 5  # flag missed mates this short, even when already winning (chess.com penalises these)
 DATA = Path(__file__).parent / "data"
 CACHE = DATA / "analysis.json"
-BLUNDER, MISTAKE = 30, 20  # drop in win-probability percentage points
+BLUNDER, MISTAKE = 20, 10  # win-% points lost; chess.com grades blunder >= 0.20, mistake >= 0.10 expected points
 VAL = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 100}
 NAME = {chess.PAWN: "pawn", chess.KNIGHT: "knight", chess.BISHOP: "bishop",
         chess.ROOK: "rook", chess.QUEEN: "queen", chess.KING: "king"}
@@ -75,7 +77,11 @@ def classify(board, mv, best, pv, cp_before, cp_after):
     reply = pv[0] if pv else None
 
     if mate_before and mate_before > 0 and not (mate_after and mate_after > 0):
-        return "missed-mate", f"You had a forced checkmate here (starting {board.san(best)})."
+        return "missed-mate", (f"You had checkmate in one: {board.san(best)}." if mate_before == 1
+                               else f"You had a forced checkmate in {mate_before} here (starting {board.san(best)}).")
+    if mate_before and mate_after and 0 < mate_before <= MATE_WINDOW and mate_after > mate_before:
+        return "missed-mate", (f"You had mate in {mate_before} with {board.san(best)}; your move still wins "
+                               f"but the mate is now {mate_after} moves away.")
     if mate_after is not None and mate_after < 0:
         n = -mate_after
         return "allowed-mate", f"This lets them force checkmate in {n}." if n > 1 else "This lets them checkmate you immediately."
@@ -155,14 +161,22 @@ def analyse_game(pgn_text):
             cp_after = cp_of(info["score"], mover)
         cp_before = cp_of(before["score"], mover)
         drop = winp(cp_before) - winp(cp_after)
+        mb, ma = mate_in(cp_before), mate_in(cp_after)
+        # a short forced mate that wasn't played (or was made 2+ moves slower) - invisible to win-% when already winning
+        missed_mate = (mover == color and mb is not None and 1 <= mb <= MATE_WINDOW and
+                       (ma is None or ma < 0 or (mb == 1 and ma != 0) or (mb > 1 and ma - (mb - 1) >= 2)))
         plies.append(dict(san=san, uci=mv.uci(), mine=mover == color, drop=round(drop, 1),
+                          acc=round(max(0, min(100, 103.1668 * math.exp(-0.04354 * max(drop, 0)) - 3.1669)), 1),
                           eval_white=cp_of(info["score"], chess.WHITE) if info else (cp_after if mover == chess.WHITE else -cp_after)))
-        if mover == color and drop >= MISTAKE:
+        if mover == color and (drop >= MISTAKE or missed_mate):
             cat, why = classify(pre, mv, best, info["pv"][:4] if info else [], cp_before, cp_after)
             # good alternatives: any move within 5 win-% of the best one
             multi = eng.analyse(pre, lim, multipv=5)
             top = winp(cp_of(multi[0]["score"], mover))
-            good = [m["pv"][0].uci() for m in multi if top - winp(cp_of(m["score"], mover)) <= 5]
+            if missed_mate:  # only moves that keep a mate at least as short count as good
+                good = [m["pv"][0].uci() for m in multi if (mate_in(cp_of(m["score"], mover)) or 99) <= mb] or [multi[0]["pv"][0].uci()]
+            else:
+                good = [m["pv"][0].uci() for m in multi if top - winp(cp_of(m["score"], mover)) <= 5]
             best_line = multi[0]["pv"][:3]
             refute = info["pv"][:4] if info and info.get("pv") else []
             nonpawn = sum(VAL[p.piece_type] for p in pre.piece_map().values() if p.piece_type not in (chess.PAWN, chess.KING))
@@ -171,7 +185,8 @@ def analyse_game(pgn_text):
                 best=best_line[0].uci(), best_san=pre.san(best_line[0]), best_line=pre.variation_san(best_line),
                 good=good, refute=[m.uci() for m in refute],
                 refute_san=board.variation_san(refute) if refute else "",
-                severity="blunder" if drop >= BLUNDER else "mistake", drop=round(drop, 1),
+                severity="blunder" if drop >= BLUNDER or (missed_mate and mb <= 2) else "mistake", drop=round(drop, 1),
+                missed_mate=mb if missed_mate else None,
                 eval_before=cp_before, eval_after=cp_after, category=cat, why=why,
                 piece=pre.piece_at(mv.from_square).symbol().upper(),
                 phase="opening" if ply < 20 else ("endgame" if nonpawn <= 26 else "middlegame")))
@@ -185,7 +200,17 @@ def analyse_game(pgn_text):
         result="draw" if h["Result"] == "1/2-1/2" else ("win" if won else "loss"),
         termination=h["Termination"], opening=h.get("ECOUrl", "").rsplit("/", 1)[-1].replace("-", " "),
         time_control=h.get("TimeControl", ""), end=h.get("EndDate", h["Date"]) + " " + h.get("EndTime", ""),
-        start_fen=h.get("FEN", chess.STARTING_FEN), plies=plies, errors=errors)
+        start_fen=h.get("FEN", chess.STARTING_FEN), plies=plies, errors=errors, v=VERSION,
+        accuracy=game_accuracy([p["acc"] for p in plies if p["mine"]]))
+
+
+def game_accuracy(accs):
+    """Lichess-style game accuracy: average of the arithmetic and harmonic means of per-move accuracy."""
+    if not accs:
+        return None
+    mean = sum(accs) / len(accs)
+    harmonic = len(accs) / sum(1 / max(a, 1) for a in accs)
+    return round((mean + harmonic) / 2, 1)
 
 
 def game_id(pgn_text):
@@ -204,7 +229,7 @@ def split_pgn(text):
 def main():
     src = Path(sys.argv[1]) if len(sys.argv) > 1 else DATA / "games.pgn"
     cache = {g["id"]: g for g in json.loads(CACHE.read_text())} if CACHE.exists() else {}
-    todo = [p for p in split_pgn(src.read_text()) if game_id(p) not in cache]
+    todo = [p for p in split_pgn(src.read_text()) if cache.get(game_id(p), {}).get("v") != VERSION]
     print(f"{len(cache)} cached, analysing {len(todo)} new games", file=sys.stderr)
     with Pool(9) as pool:
         for i, g in enumerate(pool.imap_unordered(analyse_game, todo), 1):

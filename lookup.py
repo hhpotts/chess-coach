@@ -45,9 +45,13 @@ def game_ref(n, move_no, side, extra):
     after = b2.variation_san(moves[ply:ply + 8])
     board = chess.Board(e["fen"])
 
+    from report import accuracies
+    ac = accuracies(games).get(g["id"])
+    acc_line = (f"Accuracy: {ac['value']} (chess.com Game Review)" if ac and ac["source"] == "chess.com" else
+                f"Accuracy: ~{ac['value']} (my estimate - not reviewed on chess.com; ask the user to run Game Review)" if ac else "Accuracy: -")
     out = [f"## G{n}-{move_no}{side}{(' ' + extra) if extra else ''} - game {n} vs {g['opponent']} ({g['opp_elo']}), "
            f"{g['date']}, I was {me}, {g['result']} ({g['termination']})",
-           g["link"],
+           g["link"], acc_line,
            f"Moves before: {before}",
            f"Game continued: {after}",
            f"Board before my move ({me} at bottom; uppercase = White):", diagram(board, me == "white"), f"FEN: {e['fen']}", ""]

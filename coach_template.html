@@ -372,7 +372,8 @@ function ago(d){
   return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days < 14 ? `${days} days ago` : `${Math.round(days/7)} weeks ago`;
 }
 const moveTag = e => `${e.move_no}${e.color === 'white' ? '.' : '...'}`;
-function gameLine(e){ return `Game ${e.game_no} of ${DATA.overview.games} vs ${e.opponent} (${e.opp_elo}), ${longDate(e.date)}, I was ${sideName(e.color)}, result: ${e.result}.${e.link ? ' ' + e.link : ''}`; }
+function gameLine(e){ return `Game ${e.game_no} of ${DATA.overview.games} vs ${e.opponent} (${e.opp_elo}), ${longDate(e.date)}, I was ${sideName(e.color)}, result: ${e.result}` +
+  (e.accuracy ? (e.accuracy.source === 'chess.com' ? `, chess.com accuracy ${e.accuracy.value}` : `, accuracy ~${e.accuracy.value} (estimate - not reviewed on chess.com)`) : '') + `.${e.link ? ' ' + e.link : ''}`; }
 const uciMove = u => ({from:u.slice(0,2), to:u.slice(2,4), promotion:u[4] || undefined});
 
 /* ---------- labels ---------- */
@@ -605,7 +606,8 @@ const Mistakes = {
         text:`<b>Reply ${k+1} of ${e.branches.length}</b> after ${esc(bsan)}: ${esc(br.text)}<br><span class="meta">Line: ${esc(br.line)}</span>`});
     });
     this.steps = steps; this.step = Math.max(0, Math.min(step, steps.length - 1));
-    $('mk-meta').innerHTML = `Game ${e.game_no} of ${DATA.overview.games} · ${fmtDate(e.date)} (${ago(e.date)}) · move ${e.move_no} · ${you} vs ${esc(e.opponent)} (${e.opp_elo}) · ${e.result}` + (e.link ? ` · <a href="${esc(e.link)}" target="_blank" rel="noopener">game</a>` : '');
+    const ac = e.accuracy ? (e.accuracy.source === 'chess.com' ? ` · accuracy ${e.accuracy.value}` : ` · accuracy ≈${e.accuracy.value} <span title="Estimated - run Game Review on chess.com for the real figure">(est.)</span>`) : '';
+    $('mk-meta').innerHTML = `Game ${e.game_no} of ${DATA.overview.games} · ${fmtDate(e.date)} (${ago(e.date)}) · move ${e.move_no} · ${you} vs ${esc(e.opponent)} (${e.opp_elo}) · ${e.result}${ac}` + (e.link ? ` · <a href="${esc(e.link)}" target="_blank" rel="noopener">game</a>` : '');
     $('mk-tags').innerHTML = errorTags(e);
     $('mk-cat').innerHTML = `<b>Type: ${esc(catName(e.category))}</b><br>${esc((CAT[e.category] || CAT.other)[1])}`;
     $('mk-count').textContent = `Mistake ${this.i+1}/${this.list.length}`;

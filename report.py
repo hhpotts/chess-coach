@@ -1,5 +1,5 @@
 """Build coach.html (overview, mistake viewer, practice, puzzles, openings) from data/*.json."""
-import chess, collections, json, re, statistics
+import chess, collections, json, math, re, statistics
 from explain import why_best, branches, punish_shape, danger
 from pathlib import Path
 
@@ -214,8 +214,41 @@ def trend(games):
                 rates={c: [rate(early, c), rate(recent, c)] for c in cats})
 
 
+def raw_accuracy(g):
+    """Uncalibrated score that tracks chess.com's accuracy well: flat win% curve, plain mean, missed mates (<=5) count as a 30% loss."""
+    k, s, prev, accs = 0.0015, (1 if g["color"] == "white" else -1), 0, []
+    wp = lambda cp: 50 + 50 * (2 / (1 + math.exp(-k * cp)) - 1)
+    mate = lambda cp: None if abs(cp) < 9000 else ((10000 - cp) if cp > 0 else -(10000 + cp))
+    for p in g["plies"]:
+        after = p["eval_white"] * s
+        if p["mine"]:
+            d = wp(prev) - wp(after)
+            mb, ma = mate(prev), mate(after)
+            if mb and 1 <= mb <= 5 and (ma is None or ma < 0 or (mb == 1 and ma != 0) or (mb > 1 and ma - (mb - 1) >= 2)):
+                d = max(d, 30)
+            accs.append(max(0, min(100, 103.1668 * math.exp(-0.04354 * max(d, 0)) - 3.1669)))
+        prev = after
+    return sum(accs) / len(accs) if accs else None
+
+
+def accuracies(games):
+    """Per game: chess.com's accuracy when reviewed there, else an estimate calibrated against the reviewed games."""
+    cc = json.loads((DATA / "chesscom.json").read_text()) if (DATA / "chesscom.json").exists() else {}
+    raw = {g["id"]: raw_accuracy(g) for g in games}
+    pairs = [(raw[g["id"]], cc[g["link"]]["me"]) for g in games if g["link"] in cc and raw[g["id"]] is not None]
+    a, b = statistics.linear_regression(*zip(*pairs)) if len(pairs) >= 10 else (1, 0)
+    out = {}
+    for g in games:
+        if g["link"] in cc:
+            out[g["id"]] = dict(value=round(cc[g["link"]]["me"], 1), source="chess.com")
+        elif raw[g["id"]] is not None:
+            out[g["id"]] = dict(value=round(max(0, min(100, a * raw[g["id"]] + b)), 1), source="estimate")
+    return out
+
+
 def main():
     games = json.loads((DATA / "analysis.json").read_text())
+    acc = accuracies(games)
     errors = []
     deep = json.loads((DATA / "deep.json").read_text()) if (DATA / "deep.json").exists() else {}
     # G<n> = game number in chronological order; stable because new games are appended at the end
@@ -226,7 +259,7 @@ def main():
             d = deep.get(f'{g["id"]}#{e["ply"]}', {})
             e = dict(e, best_why=why_best(e, d) if d else "", branches=branches(e, d) if d else [],
                      best_deep=d.get("replies_after") or e["best"], shape=punish_shape(e))
-            errors.append(dict(e, ref=ref, game_no=n, game_id=g["id"], link=g["link"], date=g["date"], color=g["color"],
+            errors.append(dict(e, ref=ref, game_no=n, accuracy=acc.get(g["id"]), game_id=g["id"], link=g["link"], date=g["date"], color=g["color"],
                                opponent=g["opponent"], opp_elo=g["opp_elo"], result=g["result"],
                                prev=prev["uci"] if prev else None, prev_san=prev["san"] if prev else None))
     ov = overview(games)
