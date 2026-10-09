@@ -73,7 +73,10 @@ def why_best(e, deep):
     m = mate_in(best_eval)
     if m is not None and m > 0:
         line = board.variation_san(pv[:2 * m - 1])
-        return f"{best_san} starts a forced checkmate: {line}. Your move lets them escape, and it's only {standing(played_eval)}."
+        pm = mate_in(played_eval)
+        tail = (f"Your move still mates, but only in {pm}." if pm is not None and pm > 0
+                else f"Your move lets them escape, and it's only {standing(played_eval)}.")
+        return f"{best_san} starts a forced checkmate: {line}. {tail}"
 
     # what the move does directly
     moved = board.piece_at(best.from_square)
